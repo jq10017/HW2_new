@@ -1,0 +1,36 @@
+name: hw2
+description: "A Flutter project with native splash screen."
+publish_to: 'none' # Prevent publishing to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.9.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_native_splash: ^2.4.0
+
+# ==============================
+# Native splash configuration
+# ==============================
+flutter_native_splash:
+  color: "#2196F3"          # Blue background
+  image: assets/logo.png     # Centered logo
+  android: true
+  ios: true
+
+# ==============================
+# Flutter section
+# ==============================
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/logo.png
