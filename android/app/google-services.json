@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "802830422602",
+    "project_id": "hw2-new-f402b",
+    "storage_bucket": "hw2-new-f402b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:802830422602:android:1b9a8381bf84a5078f8cb3",
+        "android_client_info": {
+          "package_name": "com.example.hw2_new"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwApvfBjfWPMtY86uxIFqQRpk31AUIXkw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
