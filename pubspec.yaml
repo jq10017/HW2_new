@@ -1,16 +1,19 @@
 name: hw2
-description: "A Flutter project with native splash screen."
+description: "A new Flutter project."
 publish_to: 'none' # Prevent publishing to pub.dev
 
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.9.0 <4.0.0"
+  sdk: ^3.9.2
 
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  firebase_auth: ^6.1.2
+  firebase_core: ^4.2.1
+  cloud_firestore: 6.1.0
 
 dev_dependencies:
   flutter_test:
