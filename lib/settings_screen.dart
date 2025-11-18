@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'edit_profile_screen.dart';
 import 'message_boards_screen.dart';
@@ -19,22 +18,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _newEmailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
-  final _auth = FirebaseAuth.instance;
 
+  // --- Change Password ---
   Future<void> _changePassword() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
     try {
+      final user = FirebaseAuth.instance.currentUser!;
       final credential = EmailAuthProvider.credential(
-        email: widget.user.email!,
+        email: user.email!,
         password: _oldPasswordController.text,
       );
-      await widget.user.reauthenticateWithCredential(credential);
-      await widget.user.updatePassword(_newPasswordController.text);
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Password changed successfully!')));
+      // Reauthenticate
+      await user.reauthenticateWithCredential(credential);
+
+      // Update password
+      await user.updatePassword(_newPasswordController.text);
+      await user.reload();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password changed successfully!')),
+      );
 
       _oldPasswordController.clear();
       _newPasswordController.clear();
@@ -49,23 +55,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // --- Change Email ---
   Future<void> _changeEmail() async {
     final newEmail = _newEmailController.text.trim();
     if (newEmail.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter a new email.')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Please enter a new email.')));
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
+      final user = FirebaseAuth.instance.currentUser!;
       final credential = EmailAuthProvider.credential(
-        email: widget.user.email!,
+        email: user.email!,
         password: _oldPasswordController.text,
       );
-      await widget.user.reauthenticateWithCredential(credential);
-      await widget.user.updateEmail(newEmail);
+
+      // Reauthenticate
+      await user.reauthenticateWithCredential(credential);
+
+      // Update email
+      await user.verifyBeforeUpdateEmail(newEmail);
+      await user.reload();
 
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Email updated successfully!')));
@@ -84,21 +97,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _signOut() async {
-    await _auth.signOut();
-    Navigator.popUntil(context, (route) => route.isFirst);
-  }
+  await FirebaseAuth.instance.signOut();
+
+  // Navigate to login screen and remove all previous routes
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const LoginRegisterScreen()),
+    (route) => false,
+  );
+}
+
 
   void _onMenuSelected(String value) {
+    final user = FirebaseAuth.instance.currentUser!;
     if (value == 'home') {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const MessageBoardsScreen()),
+        MaterialPageRoute(builder: (_) => MessageBoardsScreen()),
         (route) => false,
       );
     } else if (value == 'profile') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => EditProfileScreen(user: widget.user)),
+        MaterialPageRoute(builder: (_) => EditProfileScreen(user: user)),
       );
     } else if (value == 'logout') {
       _signOut();
@@ -107,6 +127,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser!;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -132,17 +154,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => EditProfileScreen(user: widget.user)),
+                  MaterialPageRoute(builder: (_) => EditProfileScreen(user: user)),
                 );
               },
               style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 48)),
+                minimumSize: const Size(double.infinity, 48),
+              ),
             ),
             const SizedBox(height: 20),
             TextField(
               controller: _newEmailController,
               decoration: const InputDecoration(
-                  labelText: 'New Email', border: OutlineInputBorder()),
+                labelText: 'New Email',
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 12),
             _isLoading
@@ -152,7 +177,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     label: const Text('Update Email (requires current password)'),
                     onPressed: _changeEmail,
                     style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 48)),
+                      minimumSize: const Size(double.infinity, 48),
+                    ),
                   ),
             const SizedBox(height: 20),
             Form(
@@ -160,21 +186,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Change Password',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Change Password',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _oldPasswordController,
                     decoration: const InputDecoration(
-                        labelText: 'Current Password', border: OutlineInputBorder()),
+                      labelText: 'Current Password',
+                      border: OutlineInputBorder(),
+                    ),
                     obscureText: true,
-                    validator: (v) => v == null || v.isEmpty ? 'Enter current password' : null,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Enter current password' : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _newPasswordController,
                     decoration: const InputDecoration(
-                        labelText: 'New Password', border: OutlineInputBorder()),
+                      labelText: 'New Password',
+                      border: OutlineInputBorder(),
+                    ),
                     obscureText: true,
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Enter new password';
@@ -190,7 +223,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           icon: const Icon(Icons.lock_reset),
                           label: const Text('Update Password'),
                           style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(double.infinity, 48)),
+                            minimumSize: const Size(double.infinity, 48),
+                          ),
                         ),
                 ],
               ),
@@ -201,8 +235,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               label: const Text('Sign Out'),
               onPressed: _signOut,
               style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  minimumSize: const Size(double.infinity, 48)),
+                backgroundColor: Colors.red,
+                minimumSize: const Size(double.infinity, 48),
+              ),
             ),
           ],
         ),

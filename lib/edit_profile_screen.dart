@@ -7,6 +7,7 @@ import 'settings_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final User user;
+
   const EditProfileScreen({Key? key, required this.user}) : super(key: key);
 
   @override
@@ -24,7 +25,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    FirebaseFirestore.instance.collection('users').doc(widget.user.uid).get().then((doc) {
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.user.uid)
+        .get()
+        .then((doc) {
       if (doc.exists) {
         _firstNameController.text = doc['firstName'] ?? '';
         _lastNameController.text = doc['lastName'] ?? '';
@@ -42,8 +47,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'lastName': _lastNameController.text.trim(),
         'avatar': _selectedAvatar,
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully!')));
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Profile updated successfully!')));
     } catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error updating profile: $e')));
@@ -56,19 +62,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (value == 'home') {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const MessageBoardsScreen()),
+        MaterialPageRoute(builder: (_) => MessageBoardsScreen()),
         (route) => false,
       );
-    } else if (value == 'settings') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => SettingsScreen(user: widget.user)),
-      );
     } else if (value == 'logout') {
-      FirebaseAuth.instance.signOut();
-      Navigator.popUntil(context, (route) => route.isFirst);
-    }
-  }
+  await FirebaseAuth.instance.signOut();
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const LoginRegisterScreen()),
+    (route) => false,
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -93,14 +96,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           children: [
             TextField(
               controller: _firstNameController,
-              decoration: const InputDecoration(
-                  labelText: 'First Name', border: OutlineInputBorder()),
+              decoration:
+                  const InputDecoration(labelText: 'First Name', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _lastNameController,
-              decoration: const InputDecoration(
-                  labelText: 'Last Name', border: OutlineInputBorder()),
+              decoration:
+                  const InputDecoration(labelText: 'Last Name', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 20),
             Align(
@@ -120,12 +123,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            border: isSelected
-                                ? Border.all(color: Colors.blue, width: 2)
-                                : null,
+                            border: isSelected ? Border.all(color: Colors.blue, width: 2) : null,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text(avatar, style: const TextStyle(fontSize: 32)),
+                          child: Text(
+                            avatar,
+                            style: const TextStyle(fontSize: 32),
+                          ),
                         ),
                       );
                     }).toList(),
@@ -139,8 +143,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 : ElevatedButton(
                     onPressed: _updateProfile,
                     child: const Text('Save Changes'),
-                    style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 48)),
+                    style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 48)),
                   ),
           ],
         ),

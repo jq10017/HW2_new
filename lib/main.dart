@@ -6,8 +6,6 @@ import 'firebase_options.dart';
 
 import 'message_boards_screen.dart';
 import 'message_board.dart';
-import 'edit_profile_screen.dart';
-import 'settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,15 +23,12 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Game Boards App',
 
+      // Routes for your 4 boards
       routes: {
-        "/cardgames": (context) =>
-            const MessageBoard(boardName: "cardGames", title: "Card Games"),
-        "/videogames": (context) =>
-            const MessageBoard(boardName: "videoGames", title: "Video Games"),
-        "/boardgames": (context) =>
-            const MessageBoard(boardName: "boardGames", title: "Board Games"),
-        "/triviagames": (context) =>
-            const MessageBoard(boardName: "triviaGames", title: "Trivia Games"),
+        "/cardgames": (context) => MessageBoard(boardName: "cardGames", title: "Card Games"),
+        "/videogames": (context) => MessageBoard(boardName: "videoGames", title: "Video Games"),
+        "/boardgames": (context) => MessageBoard(boardName: "boardGames", title: "Board Games"),
+        "/triviagames": (context) => MessageBoard(boardName: "triviaGames", title: "Trivia Games"),
       },
 
       home: AuthGate(),
@@ -41,6 +36,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+// --- Authentication Gate ---
 class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -50,18 +46,19 @@ class AuthGate extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
+
         if (snapshot.hasData) {
-          return const MessageBoardsScreen();
+          return MessageBoardsScreen(); // removed const
         }
-        return const LoginRegisterScreen();
+
+        return LoginRegisterScreen();
       },
     );
   }
 }
 
+// --- Login / Register Switcher ---
 class LoginRegisterScreen extends StatefulWidget {
-  const LoginRegisterScreen({super.key});
-
   @override
   State<LoginRegisterScreen> createState() => _LoginRegisterScreenState();
 }
@@ -85,9 +82,10 @@ class _LoginRegisterScreenState extends State<LoginRegisterScreen> {
   }
 }
 
+// --- Register Form ---
 class RegisterForm extends StatefulWidget {
   final VoidCallback onSwitch;
-  const RegisterForm({super.key, required this.onSwitch});
+  const RegisterForm({required this.onSwitch});
 
   @override
   State<RegisterForm> createState() => _RegisterFormState();
@@ -116,18 +114,21 @@ class _RegisterFormState extends State<RegisterForm> {
 
       final uid = cred.user!.uid;
 
+      // Save user data to Firestore
       await FirebaseFirestore.instance.collection("users").doc(uid).set({
         "uid": uid,
         "firstName": firstName.text.trim(),
         "lastName": lastName.text.trim(),
         "role": role.text.trim(),
         "email": email.text.trim(),
-        "avatar": "🙂", // default avatar
         "registeredAt": FieldValue.serverTimestamp(),
+        "avatar": "🙂", // default avatar
       });
+
     } catch (e) {
       setState(() => errorMessage = e.toString());
     }
+
     setState(() => loading = false);
   }
 
@@ -137,9 +138,13 @@ class _RegisterFormState extends State<RegisterForm> {
       Column(
         children: [
           TextField(controller: firstName, decoration: inputStyle("First Name")),
+          const SizedBox(height: 8),
           TextField(controller: lastName, decoration: inputStyle("Last Name")),
+          const SizedBox(height: 8),
           TextField(controller: role, decoration: inputStyle("Role")),
+          const SizedBox(height: 8),
           TextField(controller: email, decoration: inputStyle("Email")),
+          const SizedBox(height: 8),
           TextField(controller: password, decoration: inputStyle("Password"), obscureText: true),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -158,9 +163,10 @@ class _RegisterFormState extends State<RegisterForm> {
   }
 }
 
+// --- Login Form ---
 class LoginForm extends StatefulWidget {
   final VoidCallback onSwitch;
-  const LoginForm({super.key, required this.onSwitch});
+  const LoginForm({required this.onSwitch});
 
   @override
   State<LoginForm> createState() => _LoginFormState();
@@ -176,13 +182,16 @@ class _LoginFormState extends State<LoginForm> {
   Future<void> loginUser() async {
     try {
       setState(() => loading = true);
+
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email.text.trim(),
         password: password.text.trim(),
       );
+
     } catch (e) {
       setState(() => errorMessage = e.toString());
     }
+
     setState(() => loading = false);
   }
 
@@ -192,6 +201,7 @@ class _LoginFormState extends State<LoginForm> {
       Column(
         children: [
           TextField(controller: email, decoration: inputStyle("Email")),
+          const SizedBox(height: 8),
           TextField(controller: password, decoration: inputStyle("Password"), obscureText: true),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -210,6 +220,7 @@ class _LoginFormState extends State<LoginForm> {
   }
 }
 
+// --- Helpers ---
 InputDecoration inputStyle(String label) {
   return InputDecoration(
     border: const OutlineInputBorder(),

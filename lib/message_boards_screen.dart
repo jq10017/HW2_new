@@ -43,11 +43,14 @@ class MessageBoardsScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(builder: (_) => SettingsScreen(user: user!)),
                 );
-              } else if (value == 'logout') {
-                FirebaseAuth.instance.signOut();
-                Navigator.popUntil(context, (route) => route.isFirst);
-              }
-            },
+              } else if (value == 'logout') async {
+  await FirebaseAuth.instance.signOut();
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const LoginRegisterScreen()),
+    (route) => false,
+  );
+}
+
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'home', child: Text('Message Boards')),
               const PopupMenuItem(value: 'profile', child: Text('Profile')),
