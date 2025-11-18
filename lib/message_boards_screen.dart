@@ -6,7 +6,8 @@ import 'edit_profile_screen.dart';
 import 'settings_screen.dart';
 
 class MessageBoardsScreen extends StatelessWidget {
-  const MessageBoardsScreen({super.key});
+  // Remove `const` because user-related navigation cannot be constant
+  MessageBoardsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -27,10 +28,9 @@ class MessageBoardsScreen extends StatelessWidget {
             icon: const Icon(Icons.menu),
             onSelected: (value) {
               if (value == 'home') {
-                // Go to home (message boards)
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (_) => const MessageBoardsScreen()),
+                  MaterialPageRoute(builder: (_) => MessageBoardsScreen()), // removed const
                   (route) => false,
                 );
               } else if (value == 'profile') {
