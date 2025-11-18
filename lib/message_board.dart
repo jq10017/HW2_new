@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart'; // For formatting timestamps
 
 class MessageBoard extends StatefulWidget {
-  final String boardName;    
+  final String boardName;
   final String title;
 
   const MessageBoard({
@@ -17,6 +19,23 @@ class MessageBoard extends StatefulWidget {
 
 class _MessageBoardState extends State<MessageBoard> {
   final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  String formatTimestamp(Timestamp? ts) {
+    if (ts == null) return '';
+    final date = ts.toDate();
+    return DateFormat('MM/dd HH:mm').format(date); // New format: 11/18 14:35
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,10 +45,13 @@ class _MessageBoardState extends State<MessageBoard> {
         .collection("messages")
         .orderBy("timestamp", descending: false);
 
+    final currentUser = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       body: Column(
         children: [
+          // Messages List
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: boardRef.snapshots(),
@@ -40,19 +62,91 @@ class _MessageBoardState extends State<MessageBoard> {
 
                 final docs = snapshot.data!.docs;
 
+                WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+
                 return ListView.builder(
+                  controller: _scrollController,
                   padding: const EdgeInsets.all(8),
                   itemCount: docs.length,
                   itemBuilder: (context, i) {
                     final msg = docs[i];
-                    return Container(
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade100,
-                        borderRadius: BorderRadius.circular(12),
+                    final data = msg.data() as Map<String, dynamic>;
+                    final isMe = data['uid'] == currentUser?.uid;
+
+                    final timeText = formatTimestamp(data['timestamp']);
+
+                    return Align(
+                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.all(12),
+                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                        decoration: BoxDecoration(
+                          color: isMe ? Colors.blueAccent : Colors.grey.shade300,
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(16),
+                            topRight: const Radius.circular(16),
+                            bottomLeft: Radius.circular(isMe ? 16 : 0),
+                            bottomRight: Radius.circular(isMe ? 0 : 16),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Avatar for other users
+                            if (!isMe)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: Text(
+                                  data['avatar'] ?? '🙂',
+                                  style: const TextStyle(fontSize: 28),
+                                ),
+                              ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        data['username'] ?? 'Unknown User',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: isMe ? Colors.white : Colors.black,
+                                        ),
+                                      ),
+                                      Text(
+                                        timeText,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isMe ? Colors.white70 : Colors.black54,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    data['text'] ?? '',
+                                    style: TextStyle(
+                                      color: isMe ? Colors.white : Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Avatar for current user
+                            if (isMe)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
+                                child: Text(
+                                  data['avatar'] ?? '🙂',
+                                  style: const TextStyle(fontSize: 28),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                      child: Text(msg["text"]),
                     );
                   },
                 );
@@ -60,7 +154,7 @@ class _MessageBoardState extends State<MessageBoard> {
             ),
           ),
 
-          
+          // Input Field + Send Button
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
@@ -75,28 +169,40 @@ class _MessageBoardState extends State<MessageBoard> {
                   ),
                 ),
                 const SizedBox(width: 8),
-
                 IconButton(
                   icon: const Icon(Icons.send),
                   onPressed: () async {
                     final text = _controller.text.trim();
                     if (text.isEmpty) return;
 
+                    final user = FirebaseAuth.instance.currentUser!;
+                    final userDoc = await FirebaseFirestore.instance
+                        .collection("users")
+                        .doc(user.uid)
+                        .get();
+
+                    final username = "${userDoc['firstName']} ${userDoc['lastName']}";
+                    final avatar = userDoc['avatar'] ?? '🙂';
+
                     await FirebaseFirestore.instance
                         .collection("messageBoards")
                         .doc(widget.boardName)
                         .collection("messages")
                         .add({
+                      "uid": user.uid,
+                      "username": username,
+                      "avatar": avatar,
                       "text": text,
-                      "timestamp": DateTime.now(),
+                      "timestamp": FieldValue.serverTimestamp(),
                     });
 
                     _controller.clear();
+                    _scrollToBottom();
                   },
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );

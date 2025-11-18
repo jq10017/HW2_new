@@ -7,8 +7,8 @@ class TriviaGamesBoard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MessageBoard(
-      boardName: "trivia_games",
-      title: "Trivia Games",
+      boardName: "triviaGames",
+      title: "Trivia Games Board",
     );
   }
 }

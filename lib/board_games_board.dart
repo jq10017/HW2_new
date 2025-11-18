@@ -7,8 +7,8 @@ class BoardGamesBoard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MessageBoard(
-      boardName: "board_games",
-      title: "Board Games",
+      boardName: "boardGames",
+      title: "Board Games Board",
     );
   }
 }

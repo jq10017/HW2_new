@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import 'message_board.dart';
+import 'edit_profile_screen.dart';
+import 'settings_screen.dart';
 
 class MessageBoardsScreen extends StatelessWidget {
   const MessageBoardsScreen({super.key});
@@ -6,37 +11,69 @@ class MessageBoardsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final boards = [
-  {
-    "title": "Card Games",
-    "image": "assets/card_games.png",
-    "route": "/cardgames"
-  },
-  {
-    "title": "Video Games",
-    "image": "assets/video_games.png",
-    "route": "/videogames"
-  },
-  {
-    "title": "Board Games",
-    "image": "assets/board_games.png",
-    "route": "/boardgames"
-  },
-  {
-    "title": "Trivia Games",
-    "image": "assets/trivia_games.png",
-    "route": "/triviagames"
-  },
-];
+      {"title": "Card Games", "image": "assets/card_games.png", "boardName": "cardGames"},
+      {"title": "Video Games", "image": "assets/video_games.png", "boardName": "videoGames"},
+      {"title": "Board Games", "image": "assets/board_games.png", "boardName": "boardGames"},
+      {"title": "Trivia Games", "image": "assets/trivia_games.png", "boardName": "triviaGames"},
+    ];
+
+    final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Message Boards")),
+      appBar: AppBar(
+        title: const Text("Message Boards"),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.menu),
+            onSelected: (value) {
+              if (value == 'home') {
+                // Go to home (message boards)
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MessageBoardsScreen()),
+                  (route) => false,
+                );
+              } else if (value == 'profile') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => EditProfileScreen(user: user!)),
+                );
+              } else if (value == 'settings') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => SettingsScreen(user: user!)),
+                );
+              } else if (value == 'logout') {
+                FirebaseAuth.instance.signOut();
+                Navigator.popUntil(context, (route) => route.isFirst);
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'home', child: Text('Message Boards')),
+              const PopupMenuItem(value: 'profile', child: Text('Profile')),
+              const PopupMenuItem(value: 'settings', child: Text('Settings')),
+              const PopupMenuItem(value: 'logout', child: Text('Sign Out')),
+            ],
+          )
+        ],
+      ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: boards.length,
         itemBuilder: (context, i) {
           final b = boards[i];
           return GestureDetector(
-            onTap: () => Navigator.pushNamed(context, b["route"]!),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MessageBoard(
+                    boardName: b["boardName"]!,
+                    title: b["title"]!,
+                  ),
+                ),
+              );
+            },
             child: Card(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
