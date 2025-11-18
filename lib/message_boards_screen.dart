@@ -4,9 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'message_board.dart';
 import 'edit_profile_screen.dart';
 import 'settings_screen.dart';
+import 'main.dart'; // LoginRegisterScreen
 
 class MessageBoardsScreen extends StatelessWidget {
-  // Remove `const` because user-related navigation cannot be constant
   MessageBoardsScreen({super.key});
 
   @override
@@ -26,11 +26,11 @@ class MessageBoardsScreen extends StatelessWidget {
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu),
-            onSelected: (value) {
+            onSelected: (value) async {
               if (value == 'home') {
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (_) => MessageBoardsScreen()), // removed const
+                  MaterialPageRoute(builder: (_) => MessageBoardsScreen()),
                   (route) => false,
                 );
               } else if (value == 'profile') {
@@ -43,14 +43,15 @@ class MessageBoardsScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(builder: (_) => SettingsScreen(user: user!)),
                 );
-              } else if (value == 'logout') async {
-  await FirebaseAuth.instance.signOut();
-  Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const LoginRegisterScreen()),
-    (route) => false,
-  );
-}
-
+              } else if (value == 'logout') {
+                await FirebaseAuth.instance.signOut();
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => LoginRegisterScreen()),
+                  (route) => false,
+                );
+              }
+            },
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'home', child: Text('Message Boards')),
               const PopupMenuItem(value: 'profile', child: Text('Profile')),
@@ -85,7 +86,8 @@ class MessageBoardsScreen extends StatelessWidget {
               child: Column(
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(16)),
                     child: Image.asset(
                       b["image"]!,
                       height: 160,
@@ -97,7 +99,8 @@ class MessageBoardsScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       b["title"]!,
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   )
                 ],

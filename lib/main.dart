@@ -22,21 +22,22 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Game Boards App',
-
-      // Routes for your 4 boards
       routes: {
-        "/cardgames": (context) => MessageBoard(boardName: "cardGames", title: "Card Games"),
-        "/videogames": (context) => MessageBoard(boardName: "videoGames", title: "Video Games"),
-        "/boardgames": (context) => MessageBoard(boardName: "boardGames", title: "Board Games"),
-        "/triviagames": (context) => MessageBoard(boardName: "triviaGames", title: "Trivia Games"),
+        "/cardgames": (context) =>
+            MessageBoard(boardName: "cardGames", title: "Card Games"),
+        "/videogames": (context) =>
+            MessageBoard(boardName: "videoGames", title: "Video Games"),
+        "/boardgames": (context) =>
+            MessageBoard(boardName: "boardGames", title: "Board Games"),
+        "/triviagames": (context) =>
+            MessageBoard(boardName: "triviaGames", title: "Trivia Games"),
       },
-
       home: AuthGate(),
     );
   }
 }
 
-// --- Authentication Gate ---
+
 class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -44,20 +45,23 @@ class AuthGate extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
         if (snapshot.hasData) {
-          return MessageBoardsScreen(); // removed const
+        
+          return MessageBoardsScreen();
         }
 
+        
         return LoginRegisterScreen();
       },
     );
   }
 }
 
-// --- Login / Register Switcher ---
 class LoginRegisterScreen extends StatefulWidget {
   @override
   State<LoginRegisterScreen> createState() => _LoginRegisterScreenState();
@@ -82,7 +86,7 @@ class _LoginRegisterScreenState extends State<LoginRegisterScreen> {
   }
 }
 
-// --- Register Form ---
+
 class RegisterForm extends StatefulWidget {
   final VoidCallback onSwitch;
   const RegisterForm({required this.onSwitch});
@@ -102,11 +106,9 @@ class _RegisterFormState extends State<RegisterForm> {
   String errorMessage = "";
 
   Future<void> registerUser() async {
+    setState(() => loading = true);
     try {
-      setState(() => loading = true);
-
       final auth = FirebaseAuth.instance;
-
       final cred = await auth.createUserWithEmailAndPassword(
         email: email.text.trim(),
         password: password.text.trim(),
@@ -114,7 +116,6 @@ class _RegisterFormState extends State<RegisterForm> {
 
       final uid = cred.user!.uid;
 
-      // Save user data to Firestore
       await FirebaseFirestore.instance.collection("users").doc(uid).set({
         "uid": uid,
         "firstName": firstName.text.trim(),
@@ -122,14 +123,13 @@ class _RegisterFormState extends State<RegisterForm> {
         "role": role.text.trim(),
         "email": email.text.trim(),
         "registeredAt": FieldValue.serverTimestamp(),
-        "avatar": "🙂", // default avatar
+        "avatar": "🙂",
       });
-
     } catch (e) {
       setState(() => errorMessage = e.toString());
+    } finally {
+      setState(() => loading = false);
     }
-
-    setState(() => loading = false);
   }
 
   @override
@@ -145,11 +145,16 @@ class _RegisterFormState extends State<RegisterForm> {
           const SizedBox(height: 8),
           TextField(controller: email, decoration: inputStyle("Email")),
           const SizedBox(height: 8),
-          TextField(controller: password, decoration: inputStyle("Password"), obscureText: true),
+          TextField(
+              controller: password,
+              decoration: inputStyle("Password"),
+              obscureText: true),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: loading ? null : registerUser,
-            child: loading ? const CircularProgressIndicator() : const Text("Register"),
+            child: loading
+                ? const CircularProgressIndicator()
+                : const Text("Register"),
           ),
           const SizedBox(height: 14),
           Text(errorMessage, style: const TextStyle(color: Colors.red)),
@@ -163,7 +168,7 @@ class _RegisterFormState extends State<RegisterForm> {
   }
 }
 
-// --- Login Form ---
+
 class LoginForm extends StatefulWidget {
   final VoidCallback onSwitch;
   const LoginForm({required this.onSwitch});
@@ -180,19 +185,17 @@ class _LoginFormState extends State<LoginForm> {
   String errorMessage = "";
 
   Future<void> loginUser() async {
+    setState(() => loading = true);
     try {
-      setState(() => loading = true);
-
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email.text.trim(),
         password: password.text.trim(),
       );
-
     } catch (e) {
       setState(() => errorMessage = e.toString());
+    } finally {
+      setState(() => loading = false);
     }
-
-    setState(() => loading = false);
   }
 
   @override
@@ -202,11 +205,16 @@ class _LoginFormState extends State<LoginForm> {
         children: [
           TextField(controller: email, decoration: inputStyle("Email")),
           const SizedBox(height: 8),
-          TextField(controller: password, decoration: inputStyle("Password"), obscureText: true),
+          TextField(
+              controller: password,
+              decoration: inputStyle("Password"),
+              obscureText: true),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: loading ? null : loginUser,
-            child: loading ? const CircularProgressIndicator() : const Text("Login"),
+            child: loading
+                ? const CircularProgressIndicator()
+                : const Text("Login"),
           ),
           const SizedBox(height: 14),
           Text(errorMessage, style: const TextStyle(color: Colors.red)),
@@ -220,7 +228,7 @@ class _LoginFormState extends State<LoginForm> {
   }
 }
 
-// --- Helpers ---
+
 InputDecoration inputStyle(String label) {
   return InputDecoration(
     border: const OutlineInputBorder(),

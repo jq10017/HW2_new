@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'message_boards_screen.dart';
 import 'settings_screen.dart';
+import 'main.dart'; // for LoginRegisterScreen
 
 class EditProfileScreen extends StatefulWidget {
   final User user;
@@ -42,20 +43,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _updateProfile() async {
     setState(() => _isLoading = true);
     try {
-      await FirebaseFirestore.instance.collection('users').doc(widget.user.uid).update({
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.user.uid)
+          .update({
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
         'avatar': _selectedAvatar,
       });
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Profile updated successfully!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully!')),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error updating profile: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating profile: $e')),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _signOut() async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => LoginRegisterScreen()),
+      (route) => false,
+    );
   }
 
   void _onMenuSelected(String value) {
@@ -65,13 +80,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         MaterialPageRoute(builder: (_) => MessageBoardsScreen()),
         (route) => false,
       );
+    } else if (value == 'settings') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => SettingsScreen(user: widget.user)),
+      );
     } else if (value == 'logout') {
-  await FirebaseAuth.instance.signOut();
-  Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const LoginRegisterScreen()),
-    (route) => false,
-  );
-}
+      _signOut();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -96,14 +113,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           children: [
             TextField(
               controller: _firstNameController,
-              decoration:
-                  const InputDecoration(labelText: 'First Name', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                  labelText: 'First Name', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _lastNameController,
-              decoration:
-                  const InputDecoration(labelText: 'Last Name', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                  labelText: 'Last Name', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 20),
             Align(
@@ -123,7 +140,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            border: isSelected ? Border.all(color: Colors.blue, width: 2) : null,
+                            border: isSelected
+                                ? Border.all(color: Colors.blue, width: 2)
+                                : null,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -143,7 +162,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 : ElevatedButton(
                     onPressed: _updateProfile,
                     child: const Text('Save Changes'),
-                    style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 48)),
+                    style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48)),
                   ),
           ],
         ),

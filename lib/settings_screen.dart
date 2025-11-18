@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'edit_profile_screen.dart';
 import 'message_boards_screen.dart';
@@ -19,28 +20,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
+  final _auth = FirebaseAuth.instance;
+
   // --- Change Password ---
   Future<void> _changePassword() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isLoading = true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser!;
       final credential = EmailAuthProvider.credential(
-        email: user.email!,
+        email: widget.user.email!,
         password: _oldPasswordController.text,
       );
 
       // Reauthenticate
-      await user.reauthenticateWithCredential(credential);
+      await widget.user.reauthenticateWithCredential(credential);
 
       // Update password
-      await user.updatePassword(_newPasswordController.text);
-      await user.reload();
+      await widget.user.updatePassword(_newPasswordController.text);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password changed successfully!')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Password changed successfully!')));
 
       _oldPasswordController.clear();
       _newPasswordController.clear();
@@ -55,67 +56,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // --- Change Email ---
+  // --- Change Email (Firestore only) ---
   Future<void> _changeEmail() async {
     final newEmail = _newEmailController.text.trim();
     if (newEmail.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Please enter a new email.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter a new email.')));
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser!;
-      final credential = EmailAuthProvider.credential(
-        email: user.email!,
-        password: _oldPasswordController.text,
-      );
-
-      // Reauthenticate
-      await user.reauthenticateWithCredential(credential);
-
-      // Update email
-      await user.verifyBeforeUpdateEmail(newEmail);
-      await user.reload();
+      final userDoc = FirebaseFirestore.instance.collection('users').doc(widget.user.uid);
+      await userDoc.update({'email': newEmail});
 
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Email updated successfully!')));
+          .showSnackBar(const SnackBar(content: Text('Email updated successfully in Firestore!')));
 
       _newEmailController.clear();
       _oldPasswordController.clear();
-    } on FirebaseAuthException catch (e) {
-      String message = 'Email update failed.';
-      if (e.code == 'invalid-email') message = 'Invalid email format.';
-      if (e.code == 'email-already-in-use') message = 'Email already in use.';
-      if (e.code == 'requires-recent-login') message = 'Please sign in again.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update email: $e')));
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
+  // --- Sign Out ---
   Future<void> _signOut() async {
-  await FirebaseAuth.instance.signOut();
+    await _auth.signOut();
+    // No manual navigation needed; AuthGate will handle showing login/register
+  }
 
-  // Navigate to login screen and remove all previous routes
-  Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const LoginRegisterScreen()),
-    (route) => false,
-  );
-}
-
-
+  // --- Popup Menu ---
   void _onMenuSelected(String value) {
-    final user = FirebaseAuth.instance.currentUser!;
+    final user = FirebaseAuth.instance.currentUser;
     if (value == 'home') {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => MessageBoardsScreen()),
         (route) => false,
       );
-    } else if (value == 'profile') {
+    } else if (value == 'profile' && user != null) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => EditProfileScreen(user: user)),
@@ -127,8 +111,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser!;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -152,33 +134,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: const Icon(Icons.edit),
               label: const Text('Edit Profile'),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => EditProfileScreen(user: user)),
-                );
+                final user = FirebaseAuth.instance.currentUser;
+                if (user != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => EditProfileScreen(user: user)),
+                  );
+                }
               },
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-              ),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 48)),
             ),
             const SizedBox(height: 20),
             TextField(
               controller: _newEmailController,
               decoration: const InputDecoration(
-                labelText: 'New Email',
-                border: OutlineInputBorder(),
-              ),
+                  labelText: 'New Email', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),
             _isLoading
                 ? const CircularProgressIndicator()
                 : ElevatedButton.icon(
                     icon: const Icon(Icons.email),
-                    label: const Text('Update Email (requires current password)'),
+                    label: const Text('Update Email (Firestore only)'),
                     onPressed: _changeEmail,
                     style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 48),
-                    ),
+                        minimumSize: const Size(double.infinity, 48)),
                   ),
             const SizedBox(height: 20),
             Form(
@@ -186,28 +166,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Change Password',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  const Text('Change Password',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _oldPasswordController,
                     decoration: const InputDecoration(
-                      labelText: 'Current Password',
-                      border: OutlineInputBorder(),
-                    ),
+                        labelText: 'Current Password', border: OutlineInputBorder()),
                     obscureText: true,
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Enter current password' : null,
+                    validator: (v) => v == null || v.isEmpty ? 'Enter current password' : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _newPasswordController,
                     decoration: const InputDecoration(
-                      labelText: 'New Password',
-                      border: OutlineInputBorder(),
-                    ),
+                        labelText: 'New Password', border: OutlineInputBorder()),
                     obscureText: true,
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Enter new password';
@@ -223,8 +196,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           icon: const Icon(Icons.lock_reset),
                           label: const Text('Update Password'),
                           style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 48),
-                          ),
+                              minimumSize: const Size(double.infinity, 48)),
                         ),
                 ],
               ),
@@ -235,9 +207,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               label: const Text('Sign Out'),
               onPressed: _signOut,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                minimumSize: const Size(double.infinity, 48),
-              ),
+                  backgroundColor: Colors.red,
+                  minimumSize: const Size(double.infinity, 48)),
             ),
           ],
         ),
