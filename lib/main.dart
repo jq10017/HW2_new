@@ -5,7 +5,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 
 import 'message_boards_screen.dart';
-import 'message_board.dart';    // <-- important
+import 'message_board.dart';
+import 'edit_profile_screen.dart';
+import 'settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +25,6 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Game Boards App',
 
-      // 👇 YOUR 4 ROUTES
       routes: {
         "/cardgames": (context) =>
             const MessageBoard(boardName: "cardGames", title: "Card Games"),
@@ -49,11 +50,9 @@ class AuthGate extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-
         if (snapshot.hasData) {
           return const MessageBoardsScreen();
         }
-
         return const LoginRegisterScreen();
       },
     );
@@ -86,7 +85,6 @@ class _LoginRegisterScreenState extends State<LoginRegisterScreen> {
   }
 }
 
-
 class RegisterForm extends StatefulWidget {
   final VoidCallback onSwitch;
   const RegisterForm({super.key, required this.onSwitch});
@@ -118,20 +116,18 @@ class _RegisterFormState extends State<RegisterForm> {
 
       final uid = cred.user!.uid;
 
-      
       await FirebaseFirestore.instance.collection("users").doc(uid).set({
         "uid": uid,
         "firstName": firstName.text.trim(),
         "lastName": lastName.text.trim(),
         "role": role.text.trim(),
         "email": email.text.trim(),
+        "avatar": "🙂", // default avatar
         "registeredAt": FieldValue.serverTimestamp(),
       });
-
     } catch (e) {
       setState(() => errorMessage = e.toString());
     }
-
     setState(() => loading = false);
   }
 
@@ -145,14 +141,11 @@ class _RegisterFormState extends State<RegisterForm> {
           TextField(controller: role, decoration: inputStyle("Role")),
           TextField(controller: email, decoration: inputStyle("Email")),
           TextField(controller: password, decoration: inputStyle("Password"), obscureText: true),
-
           const SizedBox(height: 20),
-
           ElevatedButton(
             onPressed: loading ? null : registerUser,
-            child: loading ? CircularProgressIndicator() : Text("Register"),
+            child: loading ? const CircularProgressIndicator() : const Text("Register"),
           ),
-
           const SizedBox(height: 14),
           Text(errorMessage, style: const TextStyle(color: Colors.red)),
           TextButton(
@@ -164,7 +157,6 @@ class _RegisterFormState extends State<RegisterForm> {
     );
   }
 }
-
 
 class LoginForm extends StatefulWidget {
   final VoidCallback onSwitch;
@@ -184,16 +176,13 @@ class _LoginFormState extends State<LoginForm> {
   Future<void> loginUser() async {
     try {
       setState(() => loading = true);
-
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email.text.trim(),
         password: password.text.trim(),
       );
-
     } catch (e) {
       setState(() => errorMessage = e.toString());
     }
-
     setState(() => loading = false);
   }
 
@@ -204,14 +193,11 @@ class _LoginFormState extends State<LoginForm> {
         children: [
           TextField(controller: email, decoration: inputStyle("Email")),
           TextField(controller: password, decoration: inputStyle("Password"), obscureText: true),
-
           const SizedBox(height: 20),
-
           ElevatedButton(
             onPressed: loading ? null : loginUser,
-            child: loading ? CircularProgressIndicator() : Text("Login"),
+            child: loading ? const CircularProgressIndicator() : const Text("Login"),
           ),
-
           const SizedBox(height: 14),
           Text(errorMessage, style: const TextStyle(color: Colors.red)),
           TextButton(
@@ -224,10 +210,9 @@ class _LoginFormState extends State<LoginForm> {
   }
 }
 
-
 InputDecoration inputStyle(String label) {
   return InputDecoration(
-    border: OutlineInputBorder(),
+    border: const OutlineInputBorder(),
     labelText: label,
   );
 }
